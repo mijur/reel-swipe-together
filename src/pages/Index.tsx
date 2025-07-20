@@ -1,14 +1,27 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { RoomCreator } from '../components/RoomCreator';
+import { SwipeInterface } from '../components/SwipeInterface';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  const [currentRoom, setCurrentRoom] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const handleCreateRoom = (roomId: string) => {
+    setCurrentRoom(roomId);
+    navigate(`/room/${roomId}`);
+  };
+
+  const handleJoinRoom = (roomId: string) => {
+    setCurrentRoom(roomId);
+    navigate(`/room/${roomId}`);
+  };
+
+  if (currentRoom) {
+    return <SwipeInterface roomId={currentRoom} userCount={1} />;
+  }
+
+  return <RoomCreator onCreateRoom={handleCreateRoom} onJoinRoom={handleJoinRoom} />;
 };
 
 export default Index;
