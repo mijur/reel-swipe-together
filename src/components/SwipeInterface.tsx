@@ -1,57 +1,9 @@
 import { useState, useEffect } from 'react';
 import { MovieCard } from './MovieCard';
+import { ServiceSelector } from './ServiceSelector';
 import { Users, Share2, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
-
-interface Movie {
-  id: string;
-  title: string;
-  year: number;
-  poster: string;
-  description: string;
-  genre: string[];
-  rating: number;
-}
-
-// Mock movie data - in real app this would come from API
-const mockMovies: Movie[] = [
-  {
-    id: '1',
-    title: 'The Matrix',
-    year: 1999,
-    poster: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=600&fit=crop',
-    description: 'A computer programmer discovers that reality as he knows it is a simulation and joins a rebellion to free humanity from their digital prison.',
-    genre: ['Sci-Fi', 'Action'],
-    rating: 5
-  },
-  {
-    id: '2',
-    title: 'Ocean Wave',
-    year: 2023,
-    poster: 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=400&h=600&fit=crop',
-    description: 'A breathtaking documentary about the power and beauty of ocean waves, exploring their impact on coastal communities around the world.',
-    genre: ['Documentary', 'Nature'],
-    rating: 4
-  },
-  {
-    id: '3',
-    title: 'Forest Light',
-    year: 2022,
-    poster: 'https://images.unsplash.com/photo-1523712999610-f77fbcfc3843?w=400&h=600&fit=crop',
-    description: 'A mystical fantasy adventure following a young explorer who discovers magical creatures living in a forest illuminated by supernatural light.',
-    genre: ['Fantasy', 'Adventure'],
-    rating: 4
-  },
-  {
-    id: '4',
-    title: 'Starry Night',
-    year: 2024,
-    poster: 'https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=600&fit=crop',
-    description: 'An epic space opera about humanity\'s first journey to a distant galaxy, filled with wonder, danger, and the search for a new home.',
-    genre: ['Sci-Fi', 'Drama'],
-    rating: 5
-  }
-];
+import { streamingService, type Movie } from '../services/streamingService';
 
 interface SwipeInterfaceProps {
   roomId?: string;
@@ -59,10 +11,36 @@ interface SwipeInterfaceProps {
 }
 
 export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) => {
-  const [currentMovies, setCurrentMovies] = useState<Movie[]>(mockMovies.slice(0, 3));
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
+  const [isLoadingMovies, setIsLoadingMovies] = useState(false);
+  const [allMovies, setAllMovies] = useState<Movie[]>([]);
+  const [currentMovies, setCurrentMovies] = useState<Movie[]>([]);
   const [movieIndex, setMovieIndex] = useState(0);
   const [swipedMovies, setSwipedMovies] = useState<{[key: string]: 'like' | 'pass'}>({});
   const [matches, setMatches] = useState<Movie[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
+
+  const handleServiceSelection = async (services: string[], region: string) => {
+    setIsLoadingMovies(true);
+    setSelectedServices(services);
+    setSelectedRegion(region);
+    
+    try {
+      const movies = await streamingService.fetchMoviesFromServices(services, region, 50);
+      setAllMovies(movies);
+      setCurrentMovies(movies.slice(0, 3));
+      setMovieIndex(0);
+      setSwipedMovies({});
+      setMatches([]);
+      setIsSetupComplete(true);
+    } catch (error) {
+      console.error('Failed to load movies:', error);
+      // Fallback to empty state or show error
+    } finally {
+      setIsLoadingMovies(false);
+    }
+  };
 
   const handleSwipe = (direction: 'left' | 'right') => {
     const currentMovie = currentMovies[0];
@@ -78,8 +56,8 @@ export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) =
         const newMovies = prev.slice(1);
         const nextIndex = movieIndex + 3;
         
-        if (nextIndex < mockMovies.length) {
-          newMovies.push(mockMovies[nextIndex]);
+        if (nextIndex < allMovies.length) {
+          newMovies.push(allMovies[nextIndex]);
         }
         
         return newMovies;
@@ -102,9 +80,19 @@ export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) =
   };
 
   const resetCards = () => {
-    setCurrentMovies(mockMovies.slice(0, 3));
+    setCurrentMovies(allMovies.slice(0, 3));
     setMovieIndex(0);
     setSwipedMovies({});
+    setMatches([]);
+  };
+
+  const goBackToSetup = () => {
+    setIsSetupComplete(false);
+    setAllMovies([]);
+    setCurrentMovies([]);
+    setMovieIndex(0);
+    setSwipedMovies({});
+    setMatches([]);
   };
 
   const shareRoom = () => {
@@ -121,6 +109,16 @@ export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) =
     }
   };
 
+  // Show setup screen if not completed
+  if (!isSetupComplete) {
+    return (
+      <ServiceSelector 
+        onSelectionComplete={handleServiceSelection}
+        isLoading={isLoadingMovies}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -133,6 +131,15 @@ export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) =
         </div>
         
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={goBackToSetup}
+            className="border-border"
+          >
+            ⚙️
+          </Button>
+          
           <Button 
             variant="outline" 
             size="sm" 
@@ -183,11 +190,11 @@ export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) =
         <div className="w-full bg-muted rounded-full h-2">
           <div 
             className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
-            style={{ width: `${((movieIndex) / mockMovies.length) * 100}%` }}
+            style={{ width: `${((movieIndex) / allMovies.length) * 100}%` }}
           />
         </div>
         <p className="text-center text-muted-foreground text-sm mt-2">
-          {movieIndex} of {mockMovies.length} movies
+          {movieIndex} of {allMovies.length} movies
         </p>
       </div>
 
