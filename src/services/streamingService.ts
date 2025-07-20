@@ -42,7 +42,8 @@ export const REGIONS: Region[] = [
   { code: 'es', name: 'Spain' },
   { code: 'it', name: 'Italy' },
   { code: 'jp', name: 'Japan' },
-  { code: 'br', name: 'Brazil' }
+  { code: 'br', name: 'Brazil' },
+  { code: 'pl', name: 'Poland' }
 ];
 
 class StreamingAPIService {
