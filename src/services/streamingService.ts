@@ -48,6 +48,7 @@ export const REGIONS: Region[] = [
 
 class StreamingAPIService {
   private readonly baseUrl = 'https://streaming-availability.p.rapidapi.com';
+  private readonly apiKey = 'demo-key'; // This should be replaced with a real API key
   
   async fetchMoviesFromServices(
     services: string[], 
@@ -55,8 +56,10 @@ class StreamingAPIService {
     limit: number = 50
   ): Promise<Movie[]> {
     try {
-      // For now, return enhanced mock data that simulates real API responses
-      // In production, this would make actual API calls
+      // For demo purposes, we'll use mock data that varies by region/services
+      // To get real data, you'd need a RapidAPI key for Streaming Availability API
+      console.log(`Fetching movies for services: ${services.join(', ')} in region: ${region}`);
+      
       const mockMovies = await this.getMockMoviesForRegion(region, services);
       return mockMovies.slice(0, limit);
     } catch (error) {

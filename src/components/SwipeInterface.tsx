@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MovieCard } from './MovieCard';
 import { ServiceSelector } from './ServiceSelector';
+import { APIKeyPrompt } from './APIKeyPrompt';
 import { Users, Share2, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { streamingService, type Movie } from '../services/streamingService';
@@ -11,6 +12,8 @@ interface SwipeInterfaceProps {
 }
 
 export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) => {
+  const [needsApiKey, setNeedsApiKey] = useState(true);
+  const [usingMockData, setUsingMockData] = useState(false);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   const [isLoadingMovies, setIsLoadingMovies] = useState(false);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
@@ -20,6 +23,18 @@ export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) =
   const [matches, setMatches] = useState<Movie[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>('');
+
+  const handleApiKeySubmit = (apiKey: string) => {
+    // In a real implementation, you'd store this securely and use it for API calls
+    localStorage.setItem('rapidapi_key', apiKey);
+    setNeedsApiKey(false);
+    setUsingMockData(false);
+  };
+
+  const handleUseMockData = () => {
+    setNeedsApiKey(false);
+    setUsingMockData(true);
+  };
 
   const handleServiceSelection = async (services: string[], region: string) => {
     setIsLoadingMovies(true);
@@ -109,6 +124,16 @@ export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) =
     }
   };
 
+  // Show API key prompt if needed
+  if (needsApiKey) {
+    return (
+      <APIKeyPrompt 
+        onApiKeySubmit={handleApiKeySubmit}
+        onUseMockData={handleUseMockData}
+      />
+    );
+  }
+
   // Show setup screen if not completed
   if (!isSetupComplete) {
     return (
@@ -127,7 +152,12 @@ export const SwipeInterface = ({ roomId, userCount = 1 }: SwipeInterfaceProps) =
           <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
             <Users className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-foreground font-medium">{userCount} viewer{userCount !== 1 ? 's' : ''}</span>
+          <div>
+            <span className="text-foreground font-medium">{userCount} viewer{userCount !== 1 ? 's' : ''}</span>
+            {usingMockData && (
+              <p className="text-xs text-muted-foreground">Using demo data</p>
+            )}
+          </div>
         </div>
         
         <div className="flex gap-2">
